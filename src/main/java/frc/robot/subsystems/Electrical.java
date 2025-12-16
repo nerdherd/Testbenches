@@ -1,0 +1,210 @@
+package frc.robot.subsystems;
+import java.util.ArrayList;
+import com.ctre.phoenix.motorcontrol.can.VictorSPX;
+import com.ctre.phoenix.motorcontrol.can.WPI_VictorSPX;
+import com.ctre.phoenix6.StatusCode;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.configs.TalonFXConfigurator;
+import com.ctre.phoenix6.controls.NeutralOut;
+import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
+ 
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
+
+public class Electrical extends SubsystemParent {
+    private int[] motorids = {2,1,7,5,3,6,8,4};
+
+    private ArrayList<WPI_VictorSPX> motors = new ArrayList<>();
+    // private final TalonFX flyWheelMotor;
+
+    // private final VictorSPX victorMotor;
+
+    private final VelocityVoltage velocityRequestFlywheel = new VelocityVoltage(0);
+
+
+    public TalonFXConfiguration motorConfigs;
+
+    private boolean enabled = false;
+    // private boolean velocityControl = true;
+
+    private double desiredVoltage = 0;
+    private final VelocityVoltage velocityRequest = new VelocityVoltage(0);
+    private final NeutralOut brakeRequest = new NeutralOut();
+
+    public Electrical(int deviceID){
+        for (int i = 0; i < motorids.length; i++){
+            motors.add(new WPI_VictorSPX(motorids[i]));
+        }
+        // flyWheelMotor = new TalonFX(deviceID);
+        // victorMotor = new VictorSPX(deviceID);
+        // flyWheelConfigurator = flyWheelMotor.getConfigurator();
+        // velocityRequest.Slot = 0;
+        // motorConfigs = new TalonFXConfiguration();
+        // configureMotor(motorConfigs);
+    }
+
+    public void configureMotor(TalonFXConfiguration motorConfigs) {
+        // flyWheelConfigurator.refresh(motorConfigs);
+        // // TODO change all of these values
+        // motorConfigs.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
+        // motorConfigs.Voltage.PeakForwardVoltage = 11.5;
+        // motorConfigs.Voltage.PeakReverseVoltage = -11.5;
+        // motorConfigs.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        // // motorConfigs.MotorOutput.DutyCycleNeutralDeadband = RollerConstants.kNeutralDeadband;
+        // motorConfigs.CurrentLimits.SupplyCurrentLimit = 40;
+        // motorConfigs.CurrentLimits.SupplyCurrentLimitEnable = false;
+        // motorConfigs.CurrentLimits.StatorCurrentLimit = 100;
+        // motorConfigs.CurrentLimits.StatorCurrentLimitEnable = true;
+        // motorConfigs.Audio.AllowMusicDurDisable = true;
+ 
+        // flyWheelConfigurator.apply(motorConfigs);
+        // TODO add logging for errors
+
+        // StatusCode response = rollerConfigurator.apply(motorConfigs);
+        // if (!response.isOK())
+        //     DriverStation.reportError("Could not apply motor configs, error code:" + response.toString(), new Error().getStackTrace());
+        // rollerConfiguratorRight.refresh(motorConfigs);
+
+        // StatusCode responseRight = rollerConfiguratorRight.apply(motorConfigs);
+
+        // if (!responseRight.isOK())
+        // DriverStation.reportError("Could not apply motor configs, error code:" + responseRight.toString(), new Error().getStackTrace());
+    }
+
+    private int state = 0;
+    // 0 will represent being the low
+    // 1 will represent increasing
+    // 2 will represent the high
+    // 3 will represent decreasing
+
+    private double voltageLow = 0;
+    private int timeLow = 50; //250x20ms 
+    private double voltageHigh = 5.0;
+    private int timeHigh = 400; //250x20ms
+    private double increasingSpeed = 0.75;
+    private double decreasingSpeed = -0.75;
+    private int time = 0;
+    private int delay = 150;
+    private int motorIndex = 0;
+
+    @Override
+    public void periodic(){
+        if (!enabled) return;
+        SmartDashboard.putNumber("desiredVoltage", desiredVoltage);
+        // SmartDashboard.putNumber("currentVoltage", flyWheelMotor.getMotorVoltage().getValueAsDouble());
+        // SmartDashboard.putNumber("currentVelocity", flyWheelMotor.getVelocity().getValueAsDouble());
+        if (state == 0){
+            desiredVoltage = voltageLow;
+            time ++;
+            if (time >= timeLow){
+                time = 0;
+                state = 1;
+            }
+        }
+        else if (state == 1){
+            desiredVoltage += increasingSpeed/50.0;
+            if (desiredVoltage >= voltageHigh){
+                desiredVoltage = voltageHigh;
+                state = 2;
+            }
+        }
+        else if (state == 2){
+            desiredVoltage = voltageHigh;
+            time ++;
+            if (time >= timeHigh){
+                time = 0;
+                state = 3;
+            }
+        }
+        else if (state == 3){
+            desiredVoltage += decreasingSpeed/50.0;
+            if (desiredVoltage <= voltageLow){
+                desiredVoltage = voltageLow;
+                state = 0;
+            }
+        }
+
+
+
+        // flyWheelMotor.setVoltage(desiredVoltage);
+
+        for (int i = 0; i < motors.size(); i++){
+            if (i == motorIndex){
+                motors.get(i).setVoltage(5.0);
+            }
+            else {
+                motors.get(i).setVoltage(0);
+                
+            }
+        }
+        
+        time++;
+        if (time >= delay){
+            time = 0;
+            motorIndex++;
+            if (motorIndex >= motors.size()){
+                motorIndex = 0;
+            }
+        }
+
+
+
+    }
+
+    public Command startCommand() {
+        return Commands.runOnce(() -> setEnabled(true));
+
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+        // if (enabled) {
+        //     flyWheelMotor.setControl(velocityRequest);
+        // } else {
+        //     desiredVoltage = 0.0;
+        //     flyWheelMotor.setControl(brakeRequest);
+        // }
+    }
+
+    private void setVelocity(double velocity){
+        velocityRequestFlywheel.Velocity = velocity;
+    }
+
+    public double getTargetVelocity() {
+        return velocityRequestFlywheel.Velocity;
+    }
+
+    private void setVoltage(double volt) {
+        desiredVoltage = volt;
+    }
+
+    public Command setEnabledCommand(boolean enabled) {
+        return Commands.runOnce(() -> setEnabled(enabled));
+    }
+
+    public Command setVelocityCommand(double velocity){
+        return Commands.runOnce(() -> setVelocity(velocity));
+    }
+
+    public Command setVoltageCommand(double voltage){
+        return Commands.runOnce(() -> setVoltage(voltage));
+    }
+
+    @Override
+    public void stop() {
+        // TODO Auto-generated method stub
+        setEnabled(false);
+    }
+
+
+}

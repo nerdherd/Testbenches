@@ -19,7 +19,8 @@ public final class Constants {
 
   public static enum Subsystem {
     Flywheel, 
-    Elevator, 
+    Elevator,
+    Electrical,
     Arm, 
     Turret
   }

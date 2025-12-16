@@ -12,6 +12,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -68,14 +69,64 @@ public class Flywheel extends SubsystemParent {
         // DriverStation.reportError("Could not apply motor configs, error code:" + responseRight.toString(), new Error().getStackTrace());
     }
 
+    private int state = 0;
+    // 0 will represent being the low
+    // 1 will represent increasing
+    // 2 will represent the high
+    // 3 will represent decreasing
+
+    private double voltageLow = 0;
+    private int timeLow = 250; //250x20ms 
+    private double voltageHigh = 2.0;
+    private int timeHigh = 250; //250x20ms
+    private double increasingSpeed = 0.75;
+    private double decreasingSpeed = -0.75;
+    private int time = 0;
+
     @Override
     public void periodic(){
         if (!enabled) return;
+        SmartDashboard.putNumber("desiredVoltage", desiredVoltage);
+        SmartDashboard.putNumber("currentVoltage", flyWheelMotor.getMotorVoltage().getValueAsDouble());
+        SmartDashboard.putNumber("currentVelocity", flyWheelMotor.getVelocity().getValueAsDouble());
+        if (state == 0){
+            desiredVoltage = voltageLow;
+            time ++;
+            if (time >= timeLow){
+                time = 0;
+                state = 1;
+            }
+        }
+        else if (state == 1){
+            desiredVoltage += increasingSpeed/50.0;
+            if (desiredVoltage >= voltageHigh){
+                desiredVoltage = voltageHigh;
+                state = 2;
+            }
+        }
+        else if (state == 2){
+            desiredVoltage = voltageHigh;
+            time ++;
+            if (time >= timeHigh){
+                time = 0;
+                state = 3;
+            }
+        }
+        else if (state == 3){
+            desiredVoltage += decreasingSpeed/50.0;
+            if (desiredVoltage <= voltageLow){
+                desiredVoltage = voltageLow;
+                state = 0;
+            }
+        }
+
+
+
         flyWheelMotor.setVoltage(desiredVoltage);
     }
 
     public Command startCommand() {
-        return null;
+        return Commands.runOnce(() -> setEnabled(true));
     }
 
     public void setEnabled(boolean enabled) {
@@ -116,7 +167,7 @@ public class Flywheel extends SubsystemParent {
     @Override
     public void stop() {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'stop'");
+        setEnabled(false);
     }
 
 

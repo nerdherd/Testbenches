@@ -6,6 +6,7 @@ package frc.robot;
 
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.Constants.Subsystem;
+import frc.robot.subsystems.Electrical;
 import frc.robot.subsystems.Elevator;
 import frc.robot.subsystems.Flywheel;
 import frc.robot.subsystems.SubsystemParent;
@@ -14,6 +15,7 @@ import static edu.wpi.first.units.Units.Volt;
 
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -30,8 +32,8 @@ public class RobotContainer {
   // The robot's subsystems and commands are defined here...
   private final SubsystemParent subsystem;
   public double volt = 0.0;
-  private final Subsystem subway = Subsystem.Flywheel; // CHANGE PER SUBSYSTEM
-  private final int motorID = 0;
+  private final Subsystem subway = Subsystem.Electrical; // CHANGE PER SUBSYSTEM
+  private final int motorID = 9;
   // Replace with CommandPS4Controller or CommandJoystick if needed
   private final Controller driverController = new Controller(0);
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
@@ -43,6 +45,9 @@ public class RobotContainer {
       case Elevator:
       subsystem = new Elevator(motorID);
         break;
+      case Electrical:
+      subsystem = new Electrical(motorID);
+        break;
       default:
         subsystem = null;
         break;
@@ -53,6 +58,7 @@ public class RobotContainer {
   
   private void configureBindings() {
     driverController.triggerLeft().onTrue(subsystem.startCommand());
+    driverController.triggerRight().onTrue(Commands.runOnce(() -> subsystem.stop()));
   }
 
   public void disabledInit(){
